@@ -278,7 +278,7 @@ class DVD:
         self.mountpoint = mountpoint
         self.verbose = verbose
 
-    def RipTitle(self, task, output, dry_run, verbose):
+    def RipTitle(self, task, output, dry_run, verbose, profile):
         if verbose:
             print('Title Scan:')
             pprint(task.title.info)
@@ -291,7 +291,7 @@ class DVD:
         args = [
             HANDBRAKE,
             '--title', str(task.title.number),
-            '--preset', "High Profile",
+            '--preset', profile,
             '--encoder', 'x264',
             '--audio', ','.join(audio_tracks),
             '--aencoder', ','.join(audio_encoders),
@@ -439,7 +439,7 @@ def TaskFilenames(tasks, output, dry_run=False):
         raise UserError("multiple tasks use same filename")
     return result
 
-def PerformTasks(dvd, tasks, title_count, filenames,
+def PerformTasks(dvd, tasks, title_count, filenames, profile,
         dry_run=False, verbose=False):
     for task, filename in zip(tasks, filenames):
         print('=' * 78)
@@ -452,7 +452,7 @@ def PerformTasks(dvd, tasks, title_count, filenames,
                     % (task.title.number, title_count, task.chapter,
                         num_chapters, filename))
         print('-' * 78)
-        dvd.RipTitle(task, filename, dry_run, verbose)
+        dvd.RipTitle(task, filename, dry_run, verbose, profile)
 
 Size = namedtuple('Size',
         ['width', 'height', 'pix_aspect_width', 'pix_aspect_height', 'fps'])
@@ -608,6 +608,11 @@ def ParseArgs():
             default=15,
             help="Amount of time to wait for a mountpoint to be mounted",
             type=float)
+    parser.add_argument('--profile',
+            default='Fast 1080p30',
+            help="""The ripping profile to use. See HandBrake docs for a list:
+            https://handbrake.fr/docs/en/latest/technical/official-presets.html
+                """)
     args = parser.parse_args()
     if not args.scan and args.output is None:
         raise UserError("output argument is required")
@@ -668,8 +673,8 @@ def main():
                 if os.path.exists(filename):
                     raise UserError('%r already exists' % filename)
 
-            PerformTasks(dvd, tasks, len(titles), filenames,
-                    dry_run=args.dry_run, verbose=args.verbose)
+            PerformTasks(dvd, tasks, len(titles), filenames, args.profile,
+                         dry_run=args.dry_run, verbose=args.verbose)
 
             print('=' * 78)
             if not args.dry_run:
